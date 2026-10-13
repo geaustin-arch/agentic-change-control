@@ -1,0 +1,11 @@
+[project]
+name = "agentic-change-control"
+version = "0.1.0"
+description = "Human-governed agentic change orchestration with explicit risk controls."
+requires-python = ">=3.11"
+dependencies = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "langgraph>=0.2,<2"]
+[project.optional-dependencies]
+test = ["pytest>=8", "httpx>=0.27"]
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
