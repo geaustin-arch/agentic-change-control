@@ -13,3 +13,19 @@ def test_arbitrary_tool_is_excluded():
     r,f=assess(req)
     assert r == Risk.CRITICAL and "non-allowlisted" in f[0]
     assert plan(req) == []
+
+def test_langgraph_blocks_critical_tool_without_human_override():
+    from change_control.graph import submit
+    result=submit({"change_id":"bad-tool-1","summary":"routine cleanup","environment":"development","actions":["delete_database"]},"bad-tool-1")
+    assert result["status"] == "blocked"
+    assert result["execution"] == []
+    assert "__interrupt__" not in result
+
+def test_langgraph_pauses_before_shared_environment_change():
+    from change_control.graph import resume, submit
+    request={"change_id":"staging-1","summary":"publish approved build","environment":"development","actions":["deploy_staging"]}
+    result=submit(request,"staging-1")
+    assert result["__interrupt__"][0].value["type"] == "change_approval"
+    final=resume("staging-1",{"approved":True,"approver":"release-reviewer","reason":"approved"})
+    assert final["status"] == "completed"
+    assert final["execution"][0]["idempotency_key"] == "staging-1:deploy_staging"
