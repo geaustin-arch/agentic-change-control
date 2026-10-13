@@ -14,6 +14,20 @@ def test_arbitrary_tool_is_excluded():
     assert r == Risk.CRITICAL and "non-allowlisted" in f[0]
     assert plan(req) == []
 
+def test_unknown_environment_and_empty_or_duplicate_actions_are_critical():
+    cases = [
+        ChangeRequest("c4", "routine update", "prodution", ("run_unit_tests",)),
+        ChangeRequest("c5", "routine update", "development", ()),
+        ChangeRequest("c6", "routine update", "development", ("run_unit_tests", "run_unit_tests")),
+    ]
+    for req in cases:
+        risk, _ = assess(req)
+        assert risk == Risk.CRITICAL
+
+def test_duplicate_actions_are_deduplicated_in_plan():
+    req = ChangeRequest("c7", "routine update", "development", ("run_unit_tests", "run_unit_tests"))
+    assert plan(req) == ["run_unit_tests"]
+
 def test_langgraph_blocks_critical_tool_without_human_override():
     from change_control.graph import submit
     result=submit({"change_id":"bad-tool-1","summary":"routine cleanup","environment":"development","actions":["delete_database"]},"bad-tool-1")

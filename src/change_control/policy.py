@@ -14,13 +14,19 @@ class ChangeRequest:
 
 def assess(req: ChangeRequest) -> tuple[Risk, list[str]]:
     findings=[]
+    if req.environment not in {"development", "staging", "production"}:
+        findings.append("environment is not recognized")
+    if not req.actions:
+        findings.append("request must include at least one action")
+    if len(set(req.actions)) != len(req.actions):
+        findings.append("request contains duplicate actions")
     if req.environment == "production": findings.append("production target requires release approval")
     if any(a not in ALLOWED_ACTIONS for a in req.actions): findings.append("request includes a non-allowlisted action")
     if "deploy_staging" in req.actions: findings.append("staging deployment changes a shared environment")
     if any(w in req.summary.lower() for w in ("credential", "secret", "payment", "customer data")):
         findings.append("sensitive change keyword requires security review")
-    risk = Risk.CRITICAL if any("non-allowlisted" in f for f in findings) else Risk.HIGH if len(findings)>1 or req.environment == "production" else Risk.MEDIUM if findings else Risk.LOW
+    risk = Risk.CRITICAL if any(any(marker in f for marker in ("non-allowlisted", "not recognized", "at least one", "duplicate")) for f in findings) else Risk.HIGH if len(findings)>1 or req.environment == "production" else Risk.MEDIUM if findings else Risk.LOW
     return risk, findings
 
 def plan(req: ChangeRequest) -> list[str]:
-    return [a for a in req.actions if a in ALLOWED_ACTIONS]
+    return list(dict.fromkeys(a for a in req.actions if a in ALLOWED_ACTIONS))
